@@ -1,4 +1,4 @@
-1. Operating systems isolate processes from each other as much as possible, allowing a program to do its thing while completely unaware of what any other processes are doing. For example, a process cannot normally access the memory of another process, or communicate with it in any way, without asking the operating system’s kernel first.
+Operating systems isolate processes from each other as much as possible, allowing a program to do its thing while completely unaware of what any other processes are doing. For example, a process cannot normally access the memory of another process, or communicate with it in any way, without asking the operating system’s kernel first.
  However, a program can spawn extra threads of execution, as part of the same process. Threads within the same process are not isolated from each other. Threads share memory and can interact with each other through that memory.
  New threads are spawned using the std::thread::spawn function from the standard library which takes a function as argument which thread will execute 
  The Rust standard library assigns every thread a unique identifier. This identifier is accessible through Thread::id() and is of the type ThreadId.
@@ -10,7 +10,7 @@
  Additionally, Builder's spawn function returns an std::io::Result, allowing you to handle situations where spawning a new thread fails.This might happen if the operating system runs out of memory, or if resource limits have been applied to your program. The std::thread::spawn function simply panics if it is unable to spawn a new thread as its a unwrap on builder 
  The Rust standard library provides the std::thread::scope function to spawn  scoped threads. It allows us to spawn threads that cannot outlive the scope of the closure we pass to that function, making it possible to safely borrow local variables.
  There are several ways to create something that’s not owned by a single thread - two are `Statics` and `Leaking`
- #Statics
+ # Statics
 ``` 
 static X: [i32; 3] = [1, 2, 3];
 
@@ -20,7 +20,7 @@ thread::spawn(|| dbg!(&X));
 ```
  Every thread can borrow it, since it’s guaranteed to always exist.
 
-#Leaking
+# Leaking
 Another way to share ownership is by leaking an allocation. Using Box::leak, we can release ownership of our program, promising to never drop it From that point on, the Box will live forever, without an owner, allowing it to be borrowed by any thread for as long as the program runs
 ```
 let x: &'static [i32; 3] = Box::leak(Box::new([1, 2, 3]));
@@ -71,14 +71,14 @@ Because of the unsafe code, the compiler is allowed to assume index is only ever
 If we execute this with an index of 3, our program might attempt to execute parts that have been optimized away, resulting in completely unpredictable behavior, long before we get to the unsafe block on the last line. Just like that, undefined behavior can propagate through a whole program, both backwards and forwards, in often very unexpected ways.
 When calling any unsafe function, read its documentation carefully and make sure you fully understand its safety requirements: the assumptions you need to uphold, as the caller, to avoid undefined behavior.
 
-#Interior Mutability
+# Interior Mutability
 
 A data type with interior mutability slightly bends the borrowing rules. Under certain conditions, those types can allow mutation through an "immutable" reference.we’ve already seen one subtle example involving interior mutability. Both Rc and Arc mutate a reference counter, even though there might be multiple clones all using the same reference counter.As soon as interior mutable types are involved, calling a reference "immutable" or "mutable" becomes confusing and inaccurate, since some things can be mutated through both. The more accurate terms are "shared" and "exclusive"
 Keep in mind that interior mutability only bends the rules of shared borrowing to allow mutation when shared. It does not change anything about exclusive borrowing. Exclusive borrowing still guarantees that there are no other active borrows. Unsafe code that results in more than one active exclusive reference to something always invokes undefined behavior, regardless of interior mutability.
 
 Let’s take a look at a few types with interior mutability and how they can allow mutation through shared references without causing undefined behavior.
 
-#Cell
+# Cell
 
 A std::cell::Cell<T> simply wraps a T, but allows mutations through a shared reference. To avoid undefined behavior, it only allows you to copy the value out (if T is Copy), or replace it with another value as a whole. In addition, it can only be used within a single thread.
 
@@ -107,7 +107,7 @@ fn f(v: &Cell<Vec<i32>>) {
 
 ```
 
-#RefCell
+# RefCell
  Unlike Cell , RefCell allows you to borrow content at a small runtime cost . A RefCell<T> does not only hold a T, but also holds a counter that keeps track of any outstanding borrows.  If you try to borrow it while it is already mutably borrowed (or vice-versa), it will panic, which avoids undefined behavior. Just like a Cell, a RefCell can only be used within a single thread.
 
 Borrowing the contents of RefCell is done by calling borrow or borrow_mut:
@@ -126,12 +126,12 @@ Borrowing the contents of an RwLock is called locking. By locking it we temporar
 
 A Mutex is very similar, but conceptually slightly simpler. Instead of keeping track of the number of shared and exclusive borrows like an RwLock, it only allows exclusive borrows.
 
-#Atomics 
+# Atomics 
 
 The atomic types represent the concurrent version of a Cell. Like a Cell, they avoid undefined behavior by making us copy values in and out as a whole, without letting us borrow the contents directly.
 Unlike a Cell, though, they cannot be of arbitrary size. Because of this, there is no generic Atomic<T> type for any T, but there are only specific atomic types such as AtomicU32 and AtomicPtr<T>. Which ones are available depends on the platform, since they require support from the processor to avoid data races. Since they are so limited in size, atomics often don’t directly contain the information that needs to be shared between threads. Instead, they are often used as a tool to make it possible to share other—​often bigger—​things between threads. When atomics are used to say something about other data, things can get surprisingly complicated.
 
-#UnsafeCell
+# UnsafeCell
 An UnsafeCell is the primitive building block for interior mutability.
 An UnsafeCell<T> wraps a T, but does not come with any conditions or restrictions to avoid undefined behavior. Instead, its get() method just gives a raw pointer to the value it wraps, which can only be meaningfully used in unsafe blocks. It leaves it up to the user to use it in a way that does not cause any undefined behavior.
 
@@ -174,7 +174,7 @@ unsafe impl Send for X {}
 unsafe impl Sync for X {}
 ```
 
-#Locking: Mutexes and RwLocks
+# Locking: Mutexes and RwLocks
 
  Unlocking is only possible on a locked mutex, and should be done by the same thread that locked it.Protecting data with a mutex is simply the agreement between all threads that they will only access the data when they have the mutex locked. That way, no two threads can ever access that data concurrently and cause a data race.
  Rust standard library provides this functionality through std::sync::Mutex<T>.
@@ -254,7 +254,7 @@ if list.lock().unwrap().pop() == Some(1) {
 ```
 Here, the temporary guard does get dropped before the body of the if statement is executed. The reason is that the condition of a regular if statement is always a plain boolean, which cannot borrow anything. There is no reason to extend the lifetime of temporaries from the condition to the end of the statement.For an if let statement, however, that might not be the case. If we had used front() rather than pop(), for example, item would be borrowing from the list, making it necessary to keep the guard around
 
-#Reader-Writer Lock
+# Reader-Writer Lock
 A mutex is only concerned with exclusive access. The MutexGuard will provide us an exclusive reference (&mut T) to the protected data even if we only wanted to look at the data and a shared reference (&T) would have sufficed.
 
 A reader-writer lock is a slightly more complicated version of a mutex that understands the difference between exclusive and shared access, and can provide either. It has three states: unlocked, locked by a single writer (for exclusive access), and locked by any number of readers (for shared access). It is commonly used for data that is often read by multiple threads, but only updated once in a while.
@@ -312,7 +312,7 @@ Unfortunately, this does mean that if unpark() is called right after park() retu
 
 This mechanism works well for simple situations like in our example, but quickly breaks down when things get more complicated. For example, if we had multiple consumer threads taking items from the same queue, the producer thread would have no way of knowing which of the consumers is actually waiting and should be woken up. The producer will have to know exactly when a consumer is waiting, and what condition it is waiting for.
 
-#Condition Variables
+# Condition Variables
 Condition variables are a more commonly used option for waiting for something to happen to data protected by a mutex. They have two basic operations: wait and notify. Threads can wait on a condition variable, after which they can be woken up when another thread notifies that same condition variable. Multiple threads can wait on the same condition variable, and notifications can either be sent to one waiting thread, or to all of them.
 
 The Rust standard library provides a condition variable as std::sync::Condvar.  Its wait method takes a MutexGuard that proves we’ve locked the mutex. It first unlocks the mutex and goes to sleep. Later, when woken up, it relocks the mutex and returns a new MutexGuard (which proves that the mutex is locked again).
@@ -350,7 +350,7 @@ thread::scope(|s| {
 
 ```
 
-#Summary
+# Summary
 
 Data that is Send can be sent to other threads, and data that is Sync can be shared between threads.
 
